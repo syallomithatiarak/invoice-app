@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Invoice Generator - Toko Kopi Koncoku</title>
+<style>
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:#f6f7fb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#202124}
+  .wrap{max-width:850px;margin:10px auto;padding:0 12px}
+  .card{background:#fff;border:1px solid #dadce0;border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+  .header{border-top:6px solid #673ab7;padding:16px 20px}
+  h1{font-size:20px;margin:0 0 4px;color:#673ab7}
+  .sub{color:#5f6368;font-size:12px}
+  .section{padding:16px 20px}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#333}
+  
+  /* Font 16px pada input mencegah iOS auto-zoom saat diketik */
+  input,select{width:100%;padding:12px;border:1px solid #c9ccd1;border-radius:8px;font-size:16px;background:#fff;touch-action:manipulation}
+  input:focus,select:focus{outline:none;border-color:#673ab7;box-shadow:0 0 0 2px rgba(103,58,183,.15)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  
+  /* Grid Item Pesanan Desktop */
+  .items-header,.item{display:grid;grid-template-columns:2.2fr 1fr 0.8fr 1.2fr 44px;gap:8px;align-items:center}
+  .items-header{font-size:12px;color:#666;font-weight:700;margin-bottom:6px}
+  .item{margin-bottom:10px}
+  
+  /* Tombol Hapus & Tambah khusus Touch Screen */
+  .remove{border:0;background:#ffebee;color:#d32f2f;border-radius:8px;height:44px;width:44px;cursor:pointer;font-size:20px;font-weight:bold;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+  .add{border:1px dashed #673ab7;color:#673ab7;background:#faf8ff;padding:14px;border-radius:8px;cursor:pointer;font-weight:700;width:100%;font-size:14px;touch-action:manipulation}
+  
+  .total{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid #eee}
+  .total-label{color:#666;font-size:13px;font-weight:bold}.total-value{font-size:20px;font-weight:800;color:#673ab7}
+  
+  /* Layout Tombol Aksi Utama */
+  .actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .btn{border:0;min-height:48px;padding:12px 16px;border-radius:8px;cursor:pointer;font-weight:700;text-align:center;text-decoration:none;font-size:14px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;touch-action:manipulation;user-select:none}
+  .btn-primary{background:#673ab7;color:#fff}
+  .btn-outline{border:1px solid #673ab7;background:#fff;color:#673ab7}
+  .btn-success{background:#0f9d58;color:#fff}
+  .btn-blue{background:#4285f4;color:#fff}
+  .btn-wa{background:#25D366;color:#fff}
+  .btn:active{opacity:0.8;transform:scale(0.98)}
+
+  /* Area Preview Invoice */
+  .preview{display:none}
+  .inv-box{border:1px solid #ddd;border-radius:10px;padding:16px;background:#fff}
+  .inv-top{display:flex;justify-content:space-between;gap:12px}
+  table{width:100%;border-collapse:collapse;margin-top:14px}
+  th,td{padding:8px 4px;border-bottom:1px solid #eee;text-align:left;font-size:12px}
+  th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3),th:nth-child(4),td:nth-child(4){text-align:right}
+  .grand{font-size:16px;font-weight:800;text-align:right;margin-top:14px;color:#000}
+  .invoice-footer{margin-top:18px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;line-height:1.5;color:#333}
+  .preview-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+
+  /* Perbaikan Tampilan Khusus Layar HP / Mobile */
+  @media(max-width:640px){
+    .row{grid-template-columns:1fr}
+    .items-header{display:none}
+    .item{grid-template-columns:1fr 1fr 1fr 44px; gap:6px}
+    .item-name{grid-column:1 / span 4; margin-bottom:4px}
+    .item-sub{display:none}
+    .actions-grid,.preview-actions{grid-template-columns:1fr}
+    .inv-top{flex-direction:column}
+  }
+  
+  /* Mode Cetak/Print */
+  @media print{
+    body{background:#fff; color:#000}
+    .formcard,.preview-actions,#loading{display:none!important}
+    .preview{display:block!important; margin:0; padding:0}
+    .wrap{max-width:none;margin:0;padding:0}
+    .card{border:0;box-shadow:none}
+    .inv-box{border:none;padding:0}
+  }
+  
+  /* Overlay Loading */
+  #loading{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);z-index:9999;align-items:center;justify-content:center;font-weight:bold;color:#673ab7;font-size:15px}
+
+  /* Custom Pop-up Modal Mobile Friendly */
+  .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center;padding:16px;}
+  .modal-card{background:#fff;border-radius:12px;padding:20px;max-width:360px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.15);text-align:center;}
+  .modal-msg{margin:0 0 18px 0;font-size:14px;color:#202124;line-height:1.4;font-weight:500;}
+  .modal-btns{display:flex;gap:10px;justify-content:center;}
+  .modal-btn{flex:1;padding:12px;border:0;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation;}
+  .modal-btn-cancel{background:#f1f3f4;color:#3c4043;border:1px solid #dadce0;}
+  .modal-btn-ok{background:#673ab7;color:#fff;}
+</style>
+</head>
+<body>
+
+<div id="loading">Menyimpan ke Master Data GSheet...</div>
+
+<!-- Custom Pop-up Modal UI -->
+<div id="customModal" class="modal-overlay">
+  <div class="modal-card">
+    <div id="modalMsg" class="modal-msg"></div>
+    <div class="modal-btns">
+      <button id="modalBtnCancel" type="button" class="modal-btn modal-btn-cancel">Batal</button>
+      <button id="modalBtnOk" type="button" class="modal-btn modal-btn-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="card formcard header">
+    <h1>Invoice Generator</h1>
+    <div class="sub">Toko Kopi Koncoku • Kasir Digital HP & Laptop</div>
+  </div>
+
+  <div class="card formcard section">
+    <div class="row">
+      <div>
+        <label>No. Invoice (Otomatis 5 Digit)</label>
+        <input id="invoiceNo" readonly style="background:#f1f3f4; font-weight:bold;">
+      </div>
+      <div>
+        <label>Tanggal Invoice</label>
+        <input id="date" type="date">
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <label>Kepada (Nama Pelanggan)</label>
+      <input id="to" placeholder="Contoh: Kopi Senja Jogja">
+    </div>
+
+    <div style="margin-bottom:12px">
+      <label>Status Pembayaran</label>
+      <select id="status">
+        <option>SUDAH LUNAS</option>
+        <option>BELUM LUNAS</option>
+      </select>
+    </div>
+
+    <label>Detail Pesanan</label>
+    <div class="items-header">
+      <div>Nama Item</div><div>Harga</div><div>Qty</div><div>Subtotal</div><div></div>
+    </div>
+    <div id="items"></div>
+    <button class="add" type="button" id="btnAddItem">+ Tambah Item Pesanan</button>
+
+    <div class="total">
+      <div class="total-label">TOTAL INVOICE</div>
+      <div id="total" class="total-value">Rp0</div>
+    </div>
+  </div>
+
+  <div class="card formcard section">
+    <div class="actions-grid">
+      <a href="https://docs.google.com/spreadsheets/d/1bD4Sxz1AZOh9ipJXkEGlKypE2Q18wvLguHPNHsPWdwI/edit" target="_blank" class="btn btn-success" id="linkMaster">📊 Lihat Master Data</a>
+      <button type="button" class="btn btn-outline" id="btnReset">🔄 Reset / Invoice Baru</button>
+    </div>
+    <button type="button" class="btn btn-primary" style="width:100%" id="btnSave">💾 Simpan ke Master Data & Buat Preview</button>
+  </div>
+
+  <!-- AREA PREVIEW & CETAK -->
+  <div class="card preview section" id="preview">
+    <div class="inv-box">
+      <div class="inv-top">
+        <div>
+          <h2 style="margin:0 0 4px; color:#673ab7">TOKO KOPI KONCOKU</h2>
+          <div style="font-size:12px;color:#666">Invoice Penjualan Resmi</div>
+        </div>
+        <div style="font-size:12px; line-height:1.5">
+          <b>No:</b> <span id="pNo"></span><br>
+          <b>Tanggal:</b> <span id="pDate"></span><br>
+          <b>Status:</b> <span id="pStatus" style="font-weight:bold; color:#0f9d58"></span>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-size:12px"><b>Kepada:</b> <br><span id="pTo" style="font-size:14px;font-weight:bold"></span></div>
+      <table>
+        <thead><tr><th>Item</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr></thead>
+        <tbody id="pItems"></tbody>
+      </table>
+      <div class="grand">TOTAL: <span id="pTotal"></span></div>
+    </div>
+
+    <div class="invoice-footer">
+      <div><b>TOKO KOPI KONCOKU</b></div>
+      <div>JL. BATIKAN, WIROGUNAN, KEC. MERGANGSAN, KOTA YOGYAKARTA 55167</div>
+      <div>WhatsApp: +62 878 3973 2642</div>
+      <div>BCA 0375501860 a/n Nicholaus Arhat Arnawi Bagaskara</div>
+    </div>
+    
+    <div class="preview-actions">
+      <button type="button" class="btn btn-blue" id="btnPrint">🖨️ Cetak / Simpan PDF</button>
+      <button type="button" class="btn btn-wa" id="btnWa">💬 Cetak & Kirim WA</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Web App URL Google Apps Script milikmu
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJ6cNgvdAoWovtDAiFvs7uNB-bNQVwxhNclYbA7tjEwgm9cfaoF43WyBGuGQxsUZXG/exec';
+
+function rupiah(n){
+  return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+}
+
+function makeInvoiceNo(){
+  return String(Math.floor(10000 + Math.random() * 90000));
+}
+
+// Custom Modal Function (Mobile Friendly replace alert & confirm)
+function showModal(msg, isConfirm = false, onConfirm = null) {
+  const overlay = document.getElementById('customModal');
+  document.getElementById('modalMsg').textContent = msg;
+  const btnCancel = document.getElementById('modalBtnCancel');
+  const btnOk = document.getElementById('modalBtnOk');
+  
+  overlay.style.display = 'flex';
+  btnCancel.style.display = isConfirm ? 'block' : 'none';
+  
+  btnOk.onclick = () => {
+    overlay.style.display = 'none';
+    if(onConfirm) onConfirm();
+  };
+  btnCancel.onclick = () => { overlay.style.display = 'none'; };
+}
+
+function init(){
+  document.getElementById('invoiceNo').value = makeInvoiceNo();
+  document.getElementById('date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('items').innerHTML = '';
+  addItem();
+  
+  // Event listeners
+  document.getElementById('btnAddItem').addEventListener('click', addItem);
+  document.getElementById('btnReset').addEventListener('click', resetForm);
+  document.getElementById('btnSave').addEventListener('click', saveAndGenerate);
+  document.getElementById('btnPrint').addEventListener('click', () => window.print());
+  document.getElementById('btnWa').addEventListener('click', sendWhatsApp);
+}
+
+function addItem(){
+  const id = 'item-' + Date.now() + '-' + Math.floor(Math.random()*1000);
+  const container = document.getElementById('items');
+  const d = document.createElement('div');
+  d.className = 'item';
+  d.id = id;
+  
+  // Inputmode numeric khusus agar keypad angka langsung muncul di HP
+  d.innerHTML = `
+    <input class="item-name" placeholder="Nama item (cth: Kopi Susu)">
+    <input class="item-price" type="number" inputmode="numeric" pattern="[0-9]*" min="0" placeholder="Harga">
+    <input class="item-qty" type="number" inputmode="numeric" pattern="[0-9]*" min="1" value="1" placeholder="Qty">
+    <input class="item-sub" readonly value="Rp0">
+    <button class="remove" type="button" title="Hapus Item">×</button>`;
+  
+  container.appendChild(d);
+
+  d.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', updateTotal);
+  });
+
+  d.querySelector('.remove').addEventListener('click', function(){
+    if(document.querySelectorAll('.item').length > 1){
+      d.remove();
+      updateTotal();
+    } else {
+      showModal('Minimal harus ada 1 item pesanan.');
+    }
+  });
+
+  updateTotal();
+}
+
+function getData(){
+  const rows = [...document.querySelectorAll('.item')];
+  const items = rows.map(r=>{
+    const name = r.querySelector('.item-name').value.trim();
+    const price = Number(r.querySelector('.item-price').value||0);
+    const qty = Number(r.querySelector('.item-qty').value||0);
+    return {name, price, qty, sub: price * qty};
+  }).filter(x => x.name !== '' || x.price > 0);
+  
+  return {
+    no: document.getElementById('invoiceNo').value,
+    date: document.getElementById('date').value,
+    to: document.getElementById('to').value.trim(),
+    status: document.getElementById('status').value,
+    items,
+    total: items.reduce((a,b) => a + b.sub, 0)
+  };
+}
+
+function updateTotal(){
+  [...document.querySelectorAll('.item')].forEach(r=>{
+    const price = Number(r.querySelector('.item-price').value||0);
+    const qty = Number(r.querySelector('.item-qty').value||0);
+    r.querySelector('.item-sub').value = rupiah(price * qty);
+  });
+  document.getElementById('total').textContent = rupiah(getData().total);
+}
+
+function fmtDate(s){
+  if(!s) return '-';
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+}
+
+async function saveAndGenerate(){
+  const d = getData();
+  if(!d.to){ showModal('Harap isi nama pelanggan pada kolom "Kepada".'); return; }
+  if(!d.items.length){ showModal('Harap isi minimal 1 nama item pesanan.'); return; }
+  
+  const loading = document.getElementById('loading');
+  loading.style.display = 'flex';
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(d)
+    });
+  } catch(err) {
+    console.error(err);
+    showModal('Gagal mengirim data. Silakan periksa koneksi internet Anda.');
+  } finally {
+    loading.style.display = 'none';
+  }
+
+  generatePreview(d);
+}
+
+function generatePreview(d){
+  document.getElementById('pNo').textContent = d.no;
+  document.getElementById('pDate').textContent = fmtDate(d.date);
+  document.getElementById('pTo').textContent = d.to;
+  document.getElementById('pStatus').textContent = d.status;
+  document.getElementById('pTotal').textContent = rupiah(d.total);
+
+  const body = document.getElementById('pItems');
+  body.innerHTML = '';
+  d.items.forEach(x => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(x.name)}</td><td style="text-align:right">${x.qty}</td><td style="text-align:right">${rupiah(x.price)}</td><td style="text-align:right">${rupiah(x.sub)}</td>`;
+    body.appendChild(tr);
+  });
+
+  const previewEl = document.getElementById('preview');
+  previewEl.style.display = 'block';
+  previewEl.scrollIntoView({behavior:'smooth'});
+}
+
+function sendWhatsApp(){
+  const d = getData();
+  if(!d.to || !d.items.length){
+    showModal('Harap lengkapi invoice terlebih dahulu.');
+    return;
+  }
+  
+  const waText = 
+    `Halo *${encodeURIComponent(d.to)}*, berikut rincian invoice dari *Toko Kopi Koncoku*:%0A%0A` +
+    `*No. Invoice:* ${encodeURIComponent(d.no)}%0A` +
+    `*Tanggal:* ${encodeURIComponent(fmtDate(d.date))}%0A` +
+    `*Status:* ${encodeURIComponent(d.status)}%0A` +
+    `*Total:* ${encodeURIComponent(rupiah(d.total))}%0A%0A` +
+    `Silakan simpan file PDF terlampir. Terima kasih!`;
+  
+  window.print();
+  
+  setTimeout(() => {
+    window.open('https://wa.me/?text=' + waText, '_blank');
+  }, 1000);
+}
+
+function resetForm(){
+  showModal('Mulai buat invoice baru? Data input saat ini akan dikosongkan.', true, () => {
+    document.getElementById('to').value = '';
+    document.getElementById('status').value = 'SUDAH LUNAS';
+    document.getElementById('invoiceNo').value = makeInvoiceNo();
+    document.getElementById('date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('items').innerHTML = '';
+    addItem();
+    document.getElementById('preview').style.display = 'none';
+    updateTotal();
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
