@@ -111,8 +111,8 @@
   <div class="card formcard section">
     <div class="row">
       <div>
-        <label>No. Invoice (Otomatis 5 Digit)</label>
-        <input id="invoiceNo" readonly style="background:#f1f3f4; font-weight:bold;">
+        <label>No. Invoice (Isi Manual)</label>
+        <input id="invoiceNo" type="text" placeholder="Contoh: INV-2026-001" autocomplete="off" style="font-weight:bold;">
       </div>
       <div>
         <label>Tanggal Invoice</label>
@@ -198,10 +198,6 @@ function rupiah(n){
   return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
 }
 
-function makeInvoiceNo(){
-  return String(Math.floor(10000 + Math.random() * 90000));
-}
-
 // Custom Modal Function (Mobile Friendly replace alert & confirm)
 function showModal(msg, isConfirm = false, onConfirm = null) {
   const overlay = document.getElementById('customModal');
@@ -220,7 +216,7 @@ function showModal(msg, isConfirm = false, onConfirm = null) {
 }
 
 function init(){
-  document.getElementById('invoiceNo').value = makeInvoiceNo();
+  document.getElementById('invoiceNo').value = '';
   document.getElementById('date').value = new Date().toISOString().slice(0,10);
   document.getElementById('items').innerHTML = '';
   addItem();
@@ -302,6 +298,7 @@ function fmtDate(s){
 
 async function saveAndGenerate(){
   const d = getData();
+  if(!d.no){ showModal('Harap isi nomor invoice terlebih dahulu.'); return; }
   if(!d.to){ showModal('Harap isi nama pelanggan pada kolom "Kepada".'); return; }
   if(!d.items.length){ showModal('Harap isi minimal 1 nama item pesanan.'); return; }
   
@@ -371,7 +368,7 @@ function resetForm(){
   showModal('Mulai buat invoice baru? Data input saat ini akan dikosongkan.', true, () => {
     document.getElementById('to').value = '';
     document.getElementById('status').value = 'SUDAH LUNAS';
-    document.getElementById('invoiceNo').value = makeInvoiceNo();
+    document.getElementById('invoiceNo').value = '';
     document.getElementById('date').value = new Date().toISOString().slice(0,10);
     document.getElementById('items').innerHTML = '';
     addItem();
